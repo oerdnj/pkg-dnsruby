@@ -1,0 +1,28 @@
+This package was debianized by Ondřej Surý <ondrej@debian.org> on
+Thu, 10 Sep 2009 15:58:13 +0200.
+
+It was downloaded from http://rubyforge.org/projects/dnsruby/
+
+Upstream Author: Alex D <alexd@nominet.org.uk> and others.
+
+Copyright:
+
+    Copyright (C) 2007 by Nominet UK
+
+License:
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    
+         http://www.apache.org/licenses/LICENSE-2.0 
+    
+    On a Debian system, the license can be found at
+    /usr/share/common-licenses/Apache-2.0 .
+
+setup.rb file is copyright (c) 2000-2005 Minero Aoki and is licenced
+under the GPL version 2.1, see `/usr/share/common-licenses/GPL-2.1'.
+
+The Debian packaging is copyright 2009, Ondřej Surý <ondrej@debian.org>
+and is licensed under the GPL version 2.1 or later,
+see `/usr/share/common-licenses/GPL'.

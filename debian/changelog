@@ -1,0 +1,5 @@
+dnsruby (1.36-1) unstable; urgency=low
+
+  * Initial release (Closes: #543320)
+
+ -- Ondřej Surý <ondrej@debian.org>  Thu, 10 Sep 2009 15:18:54 +0200
