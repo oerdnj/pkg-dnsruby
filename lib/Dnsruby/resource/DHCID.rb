@@ -15,48 +15,41 @@
 #++
 module Dnsruby
   class RR
-    #Net::DNS::RR::ISDN - DNS ISDN resource record
-    #RFC 1183 Section 3.2
-    class ISDN < RR
+    #Class for DNS DHCP ID (DHCID) resource records.
+    #RFC 4701
+    class DHCID < RR
       ClassValue = nil #:nodoc: all
-      TypeValue = Types::ISDN #:nodoc: all
+      TypeValue= Types::DHCID #:nodoc: all
       
-      #The RR's address field.
-      attr_accessor :address
+      #The opaque rdata for DHCID
+      attr_accessor :dhcid_data
       
-      #The RR's sub-address field.
-      attr_accessor :subaddress
+      def from_hash(hash) #:nodoc: all
+        @dhcid_data = hash[:dhcid_data]
+      end
       
       def from_data(data) #:nodoc: all
-        @address, @subaddress= data
+        @dhcid_data,  = data
       end
       
       def from_string(input) #:nodoc: all
-        address, subaddress = input.split(" ")
-        address.sub!(/^\"/, "")
-        @address = address.sub(/\"$/, "")
-        if (subaddress)
-          subaddress.sub!(/^\"/, "")
-          @subaddress = subaddress.sub(/\"$/, "")
-        else
-          @subaddress = nil
-        end
+        buf = input.gsub(/\n/, "")
+        buf.gsub!(/ /, "")
+        @dhcid_data = buf.unpack("m*").first
       end
       
       def rdata_to_string #:nodoc: all
-        return "#{@address} #{@subaddress}"
+        return "#{[@dhcid_data.to_s].pack("m*").gsub("\n", "")}"
       end
       
       def encode_rdata(msg, canonical=false) #:nodoc: all
-        msg.put_string(@address)
-        msg.put_string(@subaddress)
+        msg.put_bytes(@dhcid_data)
       end
       
       def self.decode_rdata(msg) #:nodoc: all
-        address = msg.get_string
-        subaddress = msg.get_string
-        return self.new([address, subaddress])
+        dhcid_data, = msg.get_bytes()
+        return self.new([dhcid_data])
       end
-    end
+    end 
   end
 end

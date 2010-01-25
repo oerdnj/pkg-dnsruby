@@ -102,6 +102,12 @@ require 'Dnsruby/TheLog'
 #* /etc/nsswitch.conf is not supported.
 #* NSEC3 validation still TBD
 module Dnsruby
+
+  # @TODO@ Remember to update version in dnsruby.gemspec!
+  VERSION = 1.42
+  def Dnsruby.version
+    return VERSION
+  end
   
   @@logger = Logger.new(STDOUT)
   @@logger.level = Logger::FATAL
@@ -260,6 +266,7 @@ module Dnsruby
     CERT      = 37      # RFC 2538
     DNAME     = 39      # RFC 2672
     OPT       = 41      # RFC 2671
+#    APL       = 42      # RFC 3123
     DS        = 43      # RFC 4034
     SSHFP     = 44      # RFC 4255
     IPSECKEY  = 45      # RFC 4025
@@ -269,6 +276,7 @@ module Dnsruby
     DHCID     = 49      # RFC 4701
     NSEC3     = 50      # RFC still pending at time of writing
     NSEC3PARAM= 51      # RFC still pending at time of writing
+    HIP       = 55      # RFC 5205
     SPF       = 99      # RFC 4408
     UINFO     = 100     # non-standard
     UID       = 101     # non-standard
@@ -372,12 +380,14 @@ module Dnsruby
   
   # http://www.iana.org/assignments/dns-sec-alg-numbers/
   class Algorithms < CodeMapper
+    RESERVED   = 0
     RSAMD5     = 1
     DH         = 2
     DSA        = 3
     ECC        = 4
     RSASHA1    = 5
-    #    RSASHA256  = 
+    RSASHA256  = 8
+    RSASHA512  = 10
     INDIRECT   = 252
     PRIVATEDNS = 253
     PRIVATEOID = 254
@@ -567,6 +577,7 @@ module Dnsruby
     require 'Dnsruby/update'
     require 'Dnsruby/zone_transfer'
     require 'Dnsruby/dnssec'
+    require 'Dnsruby/zone_reader'
     
     #Default Resolver to use for Dnsruby class methods
     DefaultResolver = self.new

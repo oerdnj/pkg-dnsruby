@@ -15,48 +15,52 @@
 #++
 module Dnsruby
   class RR
-    #Net::DNS::RR::ISDN - DNS ISDN resource record
-    #RFC 1183 Section 3.2
-    class ISDN < RR
+    #Class for DNS Key Exchange (KX) resource records.
+    #RFC 2230
+    class KX < RR
       ClassValue = nil #:nodoc: all
-      TypeValue = Types::ISDN #:nodoc: all
+      TypeValue= Types::KX #:nodoc: all
       
-      #The RR's address field.
-      attr_accessor :address
+      #The preference for this mail exchange.
+      attr_accessor :preference
+      #The name of this mail exchange.
+      attr_accessor :exchange
       
-      #The RR's sub-address field.
-      attr_accessor :subaddress
+      def from_hash(hash) #:nodoc: all
+        @preference = hash[:preference]
+        @exchange = Name.create(hash[:exchange])
+      end
       
       def from_data(data) #:nodoc: all
-        @address, @subaddress= data
+        @preference, @exchange = data
       end
       
       def from_string(input) #:nodoc: all
-        address, subaddress = input.split(" ")
-        address.sub!(/^\"/, "")
-        @address = address.sub(/\"$/, "")
-        if (subaddress)
-          subaddress.sub!(/^\"/, "")
-          @subaddress = subaddress.sub(/\"$/, "")
-        else
-          @subaddress = nil
+        if (input.length > 0)
+          names = input.split(" ")
+          @preference = names[0].to_i
+          @exchange = Name.create(names[1])
         end
       end
       
       def rdata_to_string #:nodoc: all
-        return "#{@address} #{@subaddress}"
+        if (@preference!=nil)
+          return "#{@preference} #{@exchange}"
+        else
+          return ""
+        end
       end
       
       def encode_rdata(msg, canonical=false) #:nodoc: all
-        msg.put_string(@address)
-        msg.put_string(@subaddress)
+        msg.put_pack('n', @preference)
+        msg.put_name(@exchange, true)
       end
       
       def self.decode_rdata(msg) #:nodoc: all
-        address = msg.get_string
-        subaddress = msg.get_string
-        return self.new([address, subaddress])
+        preference, = msg.get_unpack('n')
+        exchange = msg.get_name
+        return self.new([preference, exchange])
       end
-    end
+    end 
   end
 end
