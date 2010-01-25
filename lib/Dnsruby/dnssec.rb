@@ -210,7 +210,8 @@ module Dnsruby
             msg.security_level = Message::SecurityLevel.SECURE
             return true
           end
-        rescue VerifyError
+        rescue VerifyError => e
+          msg.security_error = e
         end
       end
 
@@ -254,6 +255,7 @@ module Dnsruby
         end
         # Set the message security level!
         msg.security_level = last_level
+        msg.security_error = last_error
         raise VerifyError.new(last_error) if (last_level < 0)
         return (msg.security_level.code > Message::SecurityLevel::UNCHECKED)
       end
@@ -286,14 +288,14 @@ module Dnsruby
       return @@dlv_verifier.validate(msg, query)
     end
 
-    def self.verify(msg)
+    def self.verify(msg, keys=nil)
       begin
-        return true if @@anchor_verifier.verify(msg)
+        return true if @@anchor_verifier.verify(msg, keys=nil)
       rescue VerifyError
         begin
-          return true if @@root_verifier.verify(msg)
+          return true if @@root_verifier.verify(msg, keys=nil)
         rescue VerifyError
-          return true if @@dlv_verifier.verify(msg) # Will carry error to client
+          return true if @@dlv_verifier.verify(msg, keys=nil) # Will carry error to client
         end
       end
     end

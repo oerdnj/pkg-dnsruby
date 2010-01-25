@@ -164,7 +164,11 @@ module Dnsruby
       end
       
       def types=(t)
+        if (t && t.length > 0)
         @types = NSEC.get_types(t)
+        else
+          @types = []
+        end
       end
       
       def add_type(t)
@@ -226,7 +230,7 @@ module Dnsruby
 
       def NSEC3.decode_salt(input)
         if (input == "-")
-          return []
+          return ""
         end
         return [input].pack("H*")
       end
@@ -256,7 +260,7 @@ module Dnsruby
       
       def from_string(input)
         if (input.length > 0)
-          data = input.split(" ")
+          data = input.split
           self.hash_alg=(data[0]).to_i
           self.flags=(data[1]).to_i
           self.iterations=(data[2]).to_i

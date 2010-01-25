@@ -72,7 +72,7 @@ module Dnsruby
       return labels
     end
     
-    attr_reader :labels
+    attr_accessor :labels
     
     #This method should only be called internally.
     #Use Name::create to create a new Name
@@ -172,7 +172,7 @@ module Dnsruby
     end
     
     def ==(other) # :nodoc:
-      return false unless Name === other
+      return false if other.class != Name
       return @labels == other.labels && @absolute == other.absolute?
     end
     alias eql? == # :nodoc:
@@ -240,7 +240,7 @@ module Dnsruby
     # sect 5.1)
     # out: an array of labels in wire format.
     def self.name2encodedlabels (dName) #:nodoc: all
-      # Check for "/" in the name  : If there, then decode properly - otherwise, cheat and split on "."
+      # Check for "\" in the name  : If there, then decode properly - otherwise, cheat and split on "."
       if (dName.index("\\"))
         names=[]
         j=0;
@@ -267,9 +267,10 @@ module Dnsruby
       # I start looking forward and do the magic.
       
       i=0;
-      
+
+      unpacked = wire.unpack("C*")
       while (i < length )
-        c=wire.unpack("x#{i}C1") [0]
+        c = unpacked[i]
         if ( c < 33 || c > 126 )
           presentation=presentation + sprintf("\\%03u" ,c)
         elsif ( c.chr ==  "\"" )
@@ -310,7 +311,7 @@ module Dnsruby
       length=presentation.length;
     
       i=0;
-    
+
       while (i < length )
         c=presentation.unpack("x#{i}C1") [0]
         if (c == 46) # ord('.')
@@ -378,6 +379,7 @@ module Dnsruby
         end
         @downcase = string.downcase
         @string = string
+        @string_length = string.length
       end
       attr_reader :string, :downcase
       
@@ -386,7 +388,7 @@ module Dnsruby
       end
       
       def length
-        return @string.length
+        return @string_length
       end
       
       def inspect

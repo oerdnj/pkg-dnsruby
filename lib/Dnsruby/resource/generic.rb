@@ -122,6 +122,14 @@ module Dnsruby
     class ANY < RR
       ClassValue = nil #:nodoc: all
       TypeValue = Types::ANY #:nodoc: all
+      def encode_rdata(msg, canonical=false) #:nodoc: all
+        return ""
+      end
+      def self.decode_rdata(msg) #:nodoc: all
+        return self.new([])
+      end
+      def from_data(data)
+      end
     end
   end  
 end
@@ -150,3 +158,8 @@ require 'Dnsruby/resource/DS'
 require 'Dnsruby/resource/NSEC3'
 require 'Dnsruby/resource/NSEC3PARAM'
 require 'Dnsruby/resource/DLV'
+require 'Dnsruby/resource/SSHFP'
+require 'Dnsruby/resource/IPSECKEY'
+require 'Dnsruby/resource/HIP'
+require 'Dnsruby/resource/KX'
+require 'Dnsruby/resource/DHCID'

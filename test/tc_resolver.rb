@@ -147,14 +147,14 @@ class TestResolver < Test::Unit::TestCase
       rescue ResolvTimeout
         stop=Time.now
         time = stop-start
-        assert(time <= expected *1.2 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")        
+        assert(time <= expected *1.3 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")
       end
   end
   end
   
   def test_packet_timeout
-    if (!RUBY_PLATFORM=~/darwin/)
-      res = Resolver.new({:nameserver => "10.0.1.128"})
+        res = Resolver.new({:nameserver => []})
+#      res = Resolver.new({:nameserver => "10.0.1.128"})
       start=stop=0
       retry_times = retry_delay = packet_timeout= 10
       query_timeout=2
@@ -171,13 +171,12 @@ class TestResolver < Test::Unit::TestCase
       rescue ResolvTimeout
         stop=Time.now
         time = stop-start
-        assert(time <= expected *1.1 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")        
+        assert(time <= expected *1.3 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")
       end    #
-  end
   end
   
   def test_queue_packet_timeout
-    if (!RUBY_PLATFORM=~/darwin/)
+#    if (!RUBY_PLATFORM=~/darwin/)
       res = Resolver.new({:nameserver => "10.0.1.128"})
 #      bad = SingleResolver.new("localhost")
       res.add_server("localhost")
@@ -192,8 +191,8 @@ class TestResolver < Test::Unit::TestCase
       assert(ret==nil)
       assert(err.class == ResolvTimeout, "#{err.class}, #{err}")
       time = stop-start
-      assert(time <= expected *1.2 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")            
-    end
+      assert(time <= expected *1.3 && time >= expected *0.9, "Wrong time take, expected #{expected}, took #{time}")
+#    end
   end
   
   def test_illegal_src_port

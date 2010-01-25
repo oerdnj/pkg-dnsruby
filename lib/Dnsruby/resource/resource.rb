@@ -408,6 +408,14 @@ module Dnsruby
       if (rrtype == '')
         rrtype = 'ANY';
       end
+
+      if ((rrtype == "NAPTR") || (rrtype == "TXT"))
+      else
+        if (rdata)
+        rdata.gsub!("(", "")
+        rdata.gsub!(")", "")
+        end
+      end
       
       if (implemented_rrs.include?(rrtype) && rdata !~/^\s*\\#/o )
         subclass = _get_subclass(name, rrtype, rrclass, ttl, rdata)
@@ -532,16 +540,22 @@ module Dnsruby
       ivars = self.instance_variables
       s_ivars = []
       ivars.each {|i| s_ivars << i.to_s} # Ruby 1.9
-      s_ivars.sort!
       s_ivars.delete "@ttl" # RFC 2136 section 1.1
       s_ivars.delete "@rdata"
+      if (self.type == Types.DS)
+        s_ivars.delete "@digest"
+      end
+      s_ivars.sort!
       
       ivars = other.instance_variables
       o_ivars = []
       ivars.each {|i| o_ivars << i.to_s} # Ruby 1.9
-      o_ivars.sort!
       o_ivars.delete "@ttl" # RFC 2136 section 1.1
       o_ivars.delete "@rdata"
+      if (other.type == Types.DS)
+        o_ivars.delete "@digest"
+      end
+      o_ivars.sort!
       
       return s_ivars == o_ivars &&
         s_ivars.collect {|name| self.instance_variable_get name} ==
@@ -561,6 +575,20 @@ module Dnsruby
       }
       return h
     end
+
+    def self.find_class(type_value, class_value) # :nodoc: all
+      klass = nil
+      if (ret = ClassHash[[type_value, class_value]])
+        return ret
+      elsif (val = ClassInsensitiveTypes[type_value])
+        klass = Class.new(val)
+        klass.const_set(:TypeValue, type_value)
+        klass.const_set(:ClassValue, class_value)
+        return klass
+      else
+        return Generic.create(type_value, class_value)
+      end
+    end
     
     #Get an RR of the specified type and class
     def self.get_class(type_value, class_value) #:nodoc: all
@@ -569,8 +597,7 @@ module Dnsruby
       end
       if (type_value.class == Class)
         type_value = type_value.const_get(:TypeValue)
-        return ClassHash[[type_value, Classes.to_code(class_value)]] ||
-          Generic.create(type_value, Classes.to_code(class_value))
+        return find_class(type_value, Classes.to_code(class_value))
       else
         if (type_value.class == Types)
           type_value = type_value.code
@@ -582,8 +609,7 @@ module Dnsruby
         else
           class_value = Classes.new(class_value).code
         end
-        return ClassHash[[type_value, class_value]] ||
-          Generic.create(type_value, class_value)
+        return find_class(type_value, class_value)
       end
       return ret
     end
@@ -621,7 +647,7 @@ module Dnsruby
       return ret
     end
   end
-end  
+end
 require 'Dnsruby/resource/domain_name'
 require 'Dnsruby/resource/generic'
 require 'Dnsruby/resource/IN'

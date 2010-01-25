@@ -63,25 +63,38 @@ module Dnsruby
       def from_string(input) #:nodoc: all
         if (input != "")
           names = input.split(" ")
-          @certtype = CertificateTypes::new(names[0])
+          begin
+            @certtype = CertificateTypes::new(names[0])
+          rescue ArgumentError
+            @certtype = CertificateTypes::new(names[0].to_i)
+          end
           @keytag = names[1].to_i
-          @alg = Dnsruby::Algorithms.new(names[2])
-          @cert = names[3]
+          begin
+            @alg = Dnsruby::Algorithms.new(names[2])
+          rescue ArgumentError
+            @alg = Dnsruby::Algorithms.new(names[2].to_i)
+          end
+          buf = names[3]
+
+
+          buf.gsub!(/\n/, "")
+          buf.gsub!(/ /, "")
+          @cert = buf.unpack("m*").first
         end
       end
       
       def rdata_to_string #:nodoc: all
-        return "#{@certtype.string} #{@keytag} #{@alg.string} #{@cert}"
+        return "#{@certtype.string} #{@keytag} #{@alg.string} #{[@cert.to_s].pack("m*").gsub("\n", "")}"
       end
       
       def encode_rdata(msg, canonical=false) #:nodoc: all
-        msg.put_pack('nnn', @certtype.code, @keytag, @alg.code)
-        msg.put_string(@cert)
+        msg.put_pack('nnc', @certtype.code, @keytag, @alg.code)
+        msg.put_bytes(@cert)
       end
       
       def self.decode_rdata(msg) #:nodoc: all
-        certtype, keytag, alg = msg.get_unpack('nnn')
-        cert = msg.get_string
+        certtype, keytag, alg = msg.get_unpack('nnc')
+        cert = msg.get_bytes
         return self.new([certtype, keytag, alg, cert])
       end
     end

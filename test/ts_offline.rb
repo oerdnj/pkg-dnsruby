@@ -39,6 +39,8 @@ require "test/tc_rrsig.rb"
 require "test/tc_nsec.rb"
 require "test/tc_nsec3.rb"
 require "test/tc_nsec3param.rb"
+require "test/tc_ipseckey.rb"
+require "test/tc_naptr.rb"
 
 begin
   require "openssl"

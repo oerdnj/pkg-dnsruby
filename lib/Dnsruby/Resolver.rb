@@ -98,14 +98,17 @@ module Dnsruby
     
     # The current Config
     attr_reader :config
+
+    # Does this Resolver cache answers, and attempt to retrieve answer from the cache?
+    attr_reader :do_caching
     
     # The array of SingleResolvers used for sending query messages
     #    attr_accessor :single_resolvers # :nodoc:
     def single_resolvers=(s) # :nodoc:
       @configured = true
-#      @single_res_mutex.synchronize {
+      #      @single_res_mutex.synchronize {
       @single_resolvers = s
-#      }
+      #      }
     end
     def single_resolvers # :nodoc:
       if (!@configured)
@@ -139,6 +142,11 @@ module Dnsruby
     # requirements.
     attr_accessor :do_validation
     
+    # Defines whether we will cache responses, or pass every request to the
+    # upstream resolver.  This is only really useful when querying authoritative
+    # servers (as the upstream recursive resolver is likely to cache)
+    attr_accessor :do_caching
+
     #--
     #@TODO@ add load_balance? i.e. Target nameservers in a random, rather than pre-determined, order?
     #This is best done when configuring the Resolver, as it will re-order servers based on their response times.
@@ -156,6 +164,7 @@ module Dnsruby
     #   response = res.query("208.77.188.166", Types.PTR)
     def query(name, type=Types.A, klass=Classes.IN, set_cd=@dnssec)
       msg = Message.new
+      msg.do_caching = @do_caching
       msg.header.rd = 1
       msg.add_question(name, type, klass)
       msg.do_validation = @do_validation
@@ -167,6 +176,7 @@ module Dnsruby
 
     def query_no_validation_or_recursion(name, type=Types.A, klass=Classes.IN) # :nodoc: all
       msg = Message.new
+      msg.do_caching = @do_caching
       msg.header.rd = false
       msg.do_validation = false
       msg.add_question(name, type, klass)
@@ -315,12 +325,19 @@ module Dnsruby
       if (!@configured)
         add_config_nameservers
       end
-#      @single_res_mutex.synchronize {
+      #      @single_res_mutex.synchronize {
       if (!@resolver_ruby) # @TODO@ Synchronize this?
         @resolver_ruby = ResolverRuby.new(self)
       end
-#      }
-      return @resolver_ruby.send_async(*args)
+      #      }
+      client_query_id = @resolver_ruby.send_async(*args)
+      if (@single_resolvers.length == 0)
+        Thread.start {
+          sleep(@query_timeout == 0 ? 1 : @query_timeout)
+          args[1].push([client_query_id, nil, ResolvTimeout.new("Query timed out - no nameservers configured")])
+        }
+      end
+      return client_query_id
     end
     
     # Close the Resolver. Unfinished queries are terminated with OtherResolvError.
@@ -347,12 +364,14 @@ module Dnsruby
     # * :query_timeout
     # * :retry_times
     # * :retry_delay
+    # * :do_caching
     def initialize(*args)
       # @TODO@ Should we allow :namesver to be an RRSet of NS records? Would then need to randomly order them?
       @resolver_ruby = nil
       @src_address = nil
       @single_res_mutex = Mutex.new
       @configured = false
+      @do_caching = true
       @config = Config.new()
       reset_attributes
       
@@ -396,14 +415,15 @@ module Dnsruby
       end
       @configured = true
       @single_res_mutex.synchronize {
-      # Add the Config nameservers
-      @config.nameserver.each do |ns|
-        @single_resolvers.push(PacketSender.new({:server=>ns, :dnssec=>@dnssec,
-              :use_tcp=>@use_tcp, :packet_timeout=>@packet_timeout,
-              :tsig => @tsig, :ignore_truncation=>@ignore_truncation,
-              :src_address=>@src_address, :src_port=>@src_port,
-              :recurse=>@recurse, :udp_size=>@udp_size}))
-      end
+        # Add the Config nameservers
+        @config.nameserver.each do |ns|
+          @single_resolvers.push(PacketSender.new({:server=>ns, :dnssec=>@dnssec,
+                :use_tcp=>@use_tcp, :packet_timeout=>@packet_timeout,
+                :tsig => @tsig, :ignore_truncation=>@ignore_truncation,
+                :src_address=>@src_address, :src_port=>@src_port,
+                :do_caching=>@do_caching,
+                :recurse=>@recurse, :udp_size=>@udp_size}))
+        end
       }
     end
     
@@ -435,6 +455,7 @@ module Dnsruby
       @port = DefaultPort
       @udp_size = DefaultUDPSize
       @dnssec = DefaultDnssec
+      @do_caching= true
       @use_tcp = false
       @tsig = nil
       @ignore_truncation = false
@@ -443,7 +464,7 @@ module Dnsruby
       @src_port        = [0]
       @recurse = true
       @single_res_mutex.synchronize {
-      @single_resolvers=[]
+        @single_resolvers=[]
       }
       @configured = false
     end
@@ -487,9 +508,9 @@ module Dnsruby
     end
     def nameserver=(n)
       @configured = true
-            @single_res_mutex.synchronize {
-      @single_resolvers=[]
-            }
+      @single_res_mutex.synchronize {
+        @single_resolvers=[]
+      }
       set_config_nameserver(n)
       add_config_nameservers
     end
@@ -607,7 +628,8 @@ module Dnsruby
     #Pass in either a Dnsruby::RR::TSIG, or a key_name and key (or just a key)
     #Pass in nil to stop tsig signing.
     #* res.tsig=(tsig_rr)
-    #* res.tsig=(key_name, key)
+    #* res.tsig=(key_name, key) # defaults to hmac-md5
+    #* res.tsig=(key_name, key, alg) # e.g. alg = "hmac-sha1"
     #* res.tsig=nil # Stop the resolver from signing
     def tsig=(t)
       @tsig=t
@@ -621,7 +643,11 @@ module Dnsruby
           if (args[0].instance_of?RR::TSIG)
             tsig = args[0]
           elsif (args[0].instance_of?Array)
-            tsig = RR.new_from_hash({:type => Types.TSIG, :klass => Classes.ANY, :name => args[0][0], :key => args[0][1]})
+            if (args[0].length > 2)
+              tsig = RR.new_from_hash({:type => Types.TSIG, :klass => Classes.ANY, :name => args[0][0], :key => args[0][1], :algorithm => args[0][2]})
+            else
+              tsig = RR.new_from_hash({:type => Types.TSIG, :klass => Classes.ANY, :name => args[0][0], :key => args[0][1]})
+            end
           end
         else
           #          Dnsruby.log.debug{"TSIG signing switched off"}
@@ -629,6 +655,8 @@ module Dnsruby
         end
       elsif (args.length ==2)
         tsig = RR.new_from_hash({:type => Types.TSIG, :klass => Classes.ANY, :name => args[0], :key => args[1]})
+      elsif (args.length ==3)
+        tsig = RR.new_from_hash({:type => Types.TSIG, :klass => Classes.ANY, :name => args[0], :key => args[1], :algorithm => args[2]})
       else
         raise ArgumentError.new("Wrong number of arguments to tsig=")
       end
@@ -659,6 +687,11 @@ module Dnsruby
     
     def persistent_udp=(on)
       @persistent_udp = on
+      update
+    end
+
+    def do_caching=(on)
+      @do_caching=on
       update
     end
     
@@ -692,29 +725,29 @@ module Dnsruby
       #  e.g. timeouts[timeout1]=nameserver
       timeouts = {}
       retry_delay = @retry_delay
-#      @single_res_mutex.synchronize {
-        @retry_times.times do |retry_count|
-          if (retry_count>0)
-            retry_delay *= 2
-          end
-#          servers=[]
-#          @single_resolvers.each do |r| servers.push(r.server) end
-          @single_resolvers.each_index do |i|
-            res= @single_resolvers[i]
-            next if !res # @TODO@ WHY?1
-            offset = (i*@retry_delay.to_f/@single_resolvers.length)
-            if (retry_count==0)
-              timeouts[base+offset]=[res, retry_count]
-            else
-              if (timeouts.has_key?(base+retry_delay+offset))
-                Dnsruby.log.error{"Duplicate timeout key!"}
-                raise RuntimeError.new("Duplicate timeout key!")
-              end
-              timeouts[base+retry_delay+offset]=[res, retry_count]
+      #      @single_res_mutex.synchronize {
+      @retry_times.times do |retry_count|
+        if (retry_count>0)
+          retry_delay *= 2
+        end
+        #          servers=[]
+        #          @single_resolvers.each do |r| servers.push(r.server) end
+        @single_resolvers.each_index do |i|
+          res= @single_resolvers[i]
+          next if !res # @TODO@ WHY?1
+          offset = (i*@retry_delay.to_f/@single_resolvers.length)
+          if (retry_count==0)
+            timeouts[base+offset]=[res, retry_count]
+          else
+            if (timeouts.has_key?(base+retry_delay+offset))
+              Dnsruby.log.error{"Duplicate timeout key!"}
+              raise RuntimeError.new("Duplicate timeout key!")
             end
+            timeouts[base+retry_delay+offset]=[res, retry_count]
           end
         end
-#      }
+      end
+      #      }
       return timeouts      
     end
   end
@@ -729,7 +762,7 @@ module Dnsruby
     end
     def reset_attributes #:nodoc: all
       # data structures
-#      @mutex=Mutex.new
+      #      @mutex=Mutex.new
       @query_list = {}
       @timeouts = {}
     end
@@ -773,7 +806,7 @@ module Dnsruby
       
       tick_needed=false
       # add to our data structures
-#      @mutex.synchronize{
+      #      @mutex.synchronize{
       @parent.single_res_mutex.synchronize {
         tick_needed = true if @query_list.empty?
         if (@query_list.has_key?client_query_id)
@@ -813,7 +846,7 @@ module Dnsruby
     
     # Close the Resolver. Unfinished queries are terminated with OtherResolvError.
     def close
-#      @mutex.synchronize {
+      #      @mutex.synchronize {
       @parent.single_res_mutex.synchronize {
         @query_list.each do |client_query_id, values|
           msg, client_queue, q, outstanding = values
@@ -867,7 +900,7 @@ module Dnsruby
     def tick #:nodoc: all
       # Handle the tick
       # Do we have any retries due to be sent yet?
-#      @mutex.synchronize{
+      #      @mutex.synchronize{
       @parent.single_res_mutex.synchronize {
         time_now = Time.now
         @timeouts.keys.each do |client_query_id|
@@ -949,7 +982,7 @@ module Dnsruby
         Dnsruby.log.error{"Serious internal error!! #{id} expected, #{event_id} received"}
         raise RuntimeError.new("Serious internal error!! #{id} expected, #{event_id} received")
       end
-#      @mutex.synchronize{
+      #      @mutex.synchronize{
       @parent.single_res_mutex.synchronize {
         if (@query_list[client_query_id]==nil)
           #          print "Dead query response - ignoring\n"
@@ -1047,34 +1080,34 @@ module Dnsruby
     # TO BE CALLED IN A SYNCHRONIZED BLOCK
     def increment_resolver_priority(res)
       TheLog.debug("Incrementing resolver priority for #{res.server}\n")
-#      @parent.single_res_mutex.synchronize {
-        index = @parent.single_resolvers.index(res)
-        if (index > 0)
-          @parent.single_resolvers.delete(res)
-          @parent.single_resolvers.insert(index-1,res)
-        end
-#      }
+      #      @parent.single_res_mutex.synchronize {
+      index = @parent.single_resolvers.index(res)
+      if (index > 0)
+        @parent.single_resolvers.delete(res)
+        @parent.single_resolvers.insert(index-1,res)
+      end
+      #      }
     end
 
     # TO BE CALLED IN A SYNCHRONIZED BLOCK
     def decrement_resolver_priority(res)
       TheLog.debug("Decrementing resolver priority for #{res.server}\n")
-#      @parent.single_res_mutex.synchronize {
-        index = @parent.single_resolvers.index(res)
-        if (index < @parent.single_resolvers.length)
-          @parent.single_resolvers.delete(res)
-          @parent.single_resolvers.insert(index+1,res)
-        end
-#      }
+      #      @parent.single_res_mutex.synchronize {
+      index = @parent.single_resolvers.index(res)
+      if (index < @parent.single_resolvers.length)
+        @parent.single_resolvers.delete(res)
+        @parent.single_resolvers.insert(index+1,res)
+      end
+      #      }
     end
 
     # TO BE CALLED IN A SYNCHRONIZED BLOCK
     def demote_resolver(res)
       TheLog.debug("Demoting resolver priority for #{res.server} to bottom\n")
-#      @parent.single_res_mutex.synchronize {
-        @parent.single_resolvers.delete(res)
-        @parent.single_resolvers.push(res)
-#      }
+      #      @parent.single_res_mutex.synchronize {
+      @parent.single_resolvers.delete(res)
+      @parent.single_resolvers.push(res)
+      #      }
     end
     
     def handle_response(select_queue, query_id, response) #:nodoc: all

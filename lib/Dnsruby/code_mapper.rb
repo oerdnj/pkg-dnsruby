@@ -103,7 +103,7 @@ module Dnsruby
         code = array.stringsdown[arg.downcase]
         if (code != nil)
           @code = code
-          @string = array.strings.invert[@code]
+          @string = array.values[@code]
         else 
           unknown_string(arg)
         end
@@ -125,7 +125,7 @@ module Dnsruby
     def set_string(arg)
       array = @@arrays[self.class]
       @code = array.stringsdown[arg.downcase]
-      @string = array.strings.invert[@code]
+      @string = array.values[@code]
     end
 
     def set_code(arg)
@@ -162,18 +162,9 @@ module Dnsruby
     end
     
     def ==(other)
-      if Fixnum === other
-        if other == @code
-          return true
-        end
-      elsif String === other
-        if other == @string
-          return true
-        end
-      elsif CodeMapper === other
-        if other.string == @string && other.code == @code
-          return true
-        end
+      return true if [@code, @string].include?other
+      if (CodeMapper === other)
+        return true if ((other.code == @code) || (other.string == @string))
       end
       return false
     end
