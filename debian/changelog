@@ -1,3 +1,9 @@
+dnsruby (1.43-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Ondřej Surý <ondrej@debian.org>  Tue, 02 Feb 2010 13:40:37 +0100
+
 dnsruby (1.42-1) unstable; urgency=low
 
   * New upstream release 1.42
