@@ -104,7 +104,7 @@ require 'Dnsruby/TheLog'
 module Dnsruby
 
   # @TODO@ Remember to update version in dnsruby.gemspec!
-  VERSION = 1.43
+  VERSION = 1.45
   def Dnsruby.version
     return VERSION
   end
@@ -462,6 +462,10 @@ module Dnsruby
   class TsigError < OtherResolvError
   end
   
+  # Sent a signed packet, got an unsigned response
+  class TsigNotSignedResponseError < TsigError
+  end
+
   #Indicates an error in decoding an incoming DNS message
   class DecodeError < ResolvError
   end

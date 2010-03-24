@@ -14,7 +14,8 @@
 #limitations under the License.
 #++
 require 'Dnsruby/select_thread'
-require 'Dnsruby/iana_ports'
+require 'ipaddr'
+#require 'Dnsruby/iana_ports'
 module Dnsruby
   class PacketSender # :nodoc: all
     @@authoritative_cache = Cache.new
@@ -76,7 +77,7 @@ module Dnsruby
     # The source address to send queries from
     # 
     # Defaults to localhost
-    attr_accessor :src_address
+    attr_reader :src_address
     
     # should the Recursion Desired bit be set on queries?
     # 
@@ -95,6 +96,24 @@ module Dnsruby
     # dnssec defaults to ON
     attr_reader :dnssec
     
+    # Set the source address. If the arg is nil, do nothing
+    def src_address=(arg)
+      if (not arg.nil?)
+        @src_address = arg
+      end
+      # Do some verification to make sure that the source address
+      # is of the same type as the server address
+      if (@server.nil?)
+        return
+      else
+        si = IPAddr.new(@src_address)
+        i = IPAddr.new(@server)
+        if (i.ipv4? and si.ipv6?) or (i.ipv6? and si.ipv4?)
+          raise ArgumentError.new("Invalid address specified (address family does not match)")
+        end
+      end
+    end
+
     #Sets the TSIG to sign outgoing messages with.
     #Pass in either a Dnsruby::RR::TSIG, or a key_name and key (or just a key)
     #Pass in nil to stop tsig signing.
@@ -174,6 +193,17 @@ module Dnsruby
       #Check server is IP
       @server=Config.resolve_server(@server)
 
+      begin
+        i = IPv4.create(@server)
+        @src_address = '0.0.0.0'
+      rescue Exception
+        begin
+          i = IPv6.create(@server)
+          @src_address = '::'
+        rescue Exception
+          Dnsruby.log.error{"Server is neither IPv4 or IPv6!\n"}
+        end
+      end
       #      ResolverRegister::register_single_resolver(self)
     end
     
@@ -320,7 +350,7 @@ module Dnsruby
               socket = UDPSocket.new()
             else
               ipv6 = @src_address =~ /:/
-              socket = UDPSocket.new(ipv6 ? Socket::AF_INET6 : Socket::AF_INET)
+              socket = UDPSocket.new(ipv6.nil? ? Socket::AF_INET : Socket::AF_INET6)
             end
             socket.bind(@src_address, src_port)
             socket.connect(@server, @port)
@@ -431,11 +461,13 @@ module Dnsruby
       #continue until we get one.
       if (@src_port[0] == 0)
         candidate = -1
-        # better to construct an array of all the ports we *can* use, and then just pick one at random!
-        candidate = Iana::UNRESERVED_PORTS[rand(Iana::UNRESERVED_PORTS.length())]
-        #        while (!(Resolver.port_in_range(candidate)))
-        #          candidate = (rand(65535-1024) + 1024)
-        #        end
+        #        # better to construct an array of all the ports we *can* use, and then just pick one at random!
+        #        candidate = Iana::UNRESERVED_PORTS[rand(Iana::UNRESERVED_PORTS.length())]
+        #        #        while (!(Resolver.port_in_range(candidate)))
+        #        #          candidate = (rand(65535-1024) + 1024)
+        #        #        end
+        # @TODO@ Should probably construct a bitmap of the IANA ports...
+        candidate = 50000 + (rand(15535)) # pick one over 50000
         return candidate
       end
       pos = rand(@src_port.length)
@@ -445,10 +477,10 @@ module Dnsruby
     def check_response(response, response_bytes, query, client_queue, client_query_id, tcp)
       # @TODO@ Should send_raw avoid this?
       if (!query.send_raw)
-        if (!check_tsig(query, response, response_bytes))
+        sig_value = check_tsig(query, response, response_bytes)
+        if (sig_value != :okay)
           # Should send error back up to Resolver here, and then NOT QUERY AGAIN!!!
-          return TsigError.new
-          #          return false
+          return sig_value
         end
         # Should check that question section is same as question that was sent! RFC 5452
         # If it's not an update...
@@ -483,19 +515,21 @@ module Dnsruby
           if !query.tsig.verify(query, response, response_bytes)
             # Discard packet and wait for correctly signed response
             Dnsruby.log.error{"TSIG authentication failed!"}
-            return false
+            return TsigError.new
           end
         else
           # Treated as having format error and discarded (RFC2845, 4.6)
+          # but return a different error code, because some servers fail at
+          # this
           Dnsruby.log.error{"Expecting TSIG signed response, but got unsigned response - discarding"}
-          return false
+          return TsigNotSignedResponseError.new
         end
       elsif (response.tsig)
         # Error - signed response to unsigned query
         Dnsruby.log.error{"Signed response to unsigned query"}
-        return false
+        return TsigError.new
       end
-      return true
+      return :okay
     end
     
     def make_query(name, type = Types::A, klass = Classes::IN, set_cd=@dnssec)
