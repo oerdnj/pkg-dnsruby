@@ -276,7 +276,7 @@ module Dnsruby
           if (ret = res.check_response(msg, bytes, query, client_queue, id, tcp))
             remove_id(id)
             exception = msg.get_exception
-            if (ret.instance_of?TsigError)
+            if (ret.kind_of?TsigError)
               exception = ret
             end
             Dnsruby.log.debug{"Pushing response to client queue"}
@@ -401,6 +401,8 @@ module Dnsruby
             return
           end
         else
+          # @TODO@ Can we get recvfrom to stop issuing PTR queries when we already
+          # know both the FQDN and the IP address?
           if (ret = socket.recvfrom(packet_size))
             buf = ret[0]
             answerport=ret[1][1]

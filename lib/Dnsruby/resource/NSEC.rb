@@ -79,13 +79,15 @@ module Dnsruby
           # from the wire, already decoded
           types =t
         elsif (t.instance_of?String)
-          if t[t.length-1, t.length]!=")"
-            t = t + " )"
+          if (index = t.index";")
+            t = t[0, index]
+          end
+          if (index = t.index")")
+            t = t[0, index]
           end
           # List of mnemonics
           types=[]
           mnemonics = t.split(" ")
-          mnemonics.pop
           mnemonics.each do |m|
             type = Types.new(m)
             types.push(type)
@@ -261,6 +263,7 @@ module Dnsruby
             len = len + data[1].length
           end
           self.types=(input[len, input.length-len])
+          @types = NSEC.get_types(input[len, input.length-len])
         end
       end
       
