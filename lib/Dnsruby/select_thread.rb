@@ -58,6 +58,8 @@ module Dnsruby
         @@queued_responses=[]
         @@queued_validation_responses=[]
         @@wakeup_sockets = get_socket_pair
+        # Suppress reverse lookups
+        BasicSocket.do_not_reverse_lookup = true
         #    end
         # Now start the select thread
         @@select_thread = Thread.new {
@@ -236,9 +238,16 @@ module Dnsruby
           answerip = msg.answerip.downcase
           answerfrom = msg.answerfrom.downcase
           dest_server = query_settings.dest_server
+          answeripaddr = IPAddr.new(answerip)
+          dest_server = IPAddr.new("0.0.0.0")
+          begin
+          destserveripaddr = IPAddr.new(dest_server)
+          rescue ArgumentError
+            # Host name not IP address
+          end
           if (dest_server && (dest_server != '0.0.0.0') &&
-                (answerip != query_settings.dest_server.downcase) &&
-                (answerfrom != query_settings.dest_server.downcase))
+                (answeripaddr != destserveripaddr) &&
+                (answerfrom != dest_server))
             Dnsruby.log.warn("Unsolicited response received from #{answerip} instead of #{query_settings.dest_server}")
           else 
             send_response_to_client(msg, bytes, socket)
@@ -516,7 +525,11 @@ module Dnsruby
       # to send it out from its normal loop.
       Dnsruby.log.debug{"Pushing response to client queue direct from resolver or validator"}
       @@mutex.synchronize{
-        @@queued_responses.push([client_id, client_queue, msg, nil, query, res])
+        err = nil
+        if (msg.rcode == RCode.NXDOMAIN)
+          err = NXDomain.new
+        end
+        @@queued_responses.push([client_id, client_queue, msg, err, query, res])
       }
       # Make sure select loop is running!
       if (@@select_thread && @@select_thread.alive?)

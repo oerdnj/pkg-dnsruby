@@ -78,7 +78,12 @@ module Dnsruby
     attr_reader :port
     
     # Should TCP be used as a transport rather than UDP?
+    # If use_tcp==true, then ONLY TCP will be used as a transport.
     attr_reader :use_tcp
+
+    # If no_tcp==true, then ONLY UDP will be used as a transport.
+    # This should not generally be used, but is provided as a debugging aid.
+    attr_reader :no_tcp
     
     
     attr_reader :tsig
@@ -288,7 +293,7 @@ module Dnsruby
     #* msg - the message to send
     #* client_queue - a Queue to push the response to, when it arrives
     #* client_query_id - an optional ID to identify the query to the client
-    #* use_tcp - whether to use TCP (defaults to SingleResolver.use_tcp)
+    #* use_tcp - whether to use only TCP (defaults to SingleResolver.use_tcp)
     #
     #Returns :
     # 
@@ -417,12 +422,13 @@ module Dnsruby
       @single_res_mutex.synchronize {
         # Add the Config nameservers
         @config.nameserver.each do |ns|
-          @single_resolvers.push(PacketSender.new({:server=>ns, :dnssec=>@dnssec,
-                :use_tcp=>@use_tcp, :packet_timeout=>@packet_timeout,
+          res = PacketSender.new({:server=>ns, :dnssec=>@dnssec,
+                :use_tcp=>@use_tcp, :no_tcp=>@no_tcp, :packet_timeout=>@packet_timeout,
                 :tsig => @tsig, :ignore_truncation=>@ignore_truncation,
                 :src_address=>@src_address, :src_port=>@src_port,
                 :do_caching=>@do_caching,
-                :recurse=>@recurse, :udp_size=>@udp_size}))
+                :recurse=>@recurse, :udp_size=>@udp_size})
+          @single_resolvers.push(res) if res
         end
       }
     end
@@ -457,6 +463,7 @@ module Dnsruby
       @dnssec = DefaultDnssec
       @do_caching= true
       @use_tcp = false
+      @no_tcp = false
       @tsig = nil
       @ignore_truncation = false
       @config = Config.new()
@@ -472,6 +479,7 @@ module Dnsruby
     def update #:nodoc: all
       #Update any resolvers we have with the latest config
       @single_res_mutex.synchronize {
+        @single_resolvers.delete(nil) # Just in case...
         @single_resolvers.each do |res|
           update_internal_res(res)
         end
@@ -488,6 +496,7 @@ module Dnsruby
     def add_server(server)# :nodoc:
       @configured = true
       res = PacketSender.new(server)
+      raise ArgumentError.new("Can't create server #{server}") if !res
       update_internal_res(res)
       @single_res_mutex.synchronize {
         @single_resolvers.push(res)
@@ -495,7 +504,7 @@ module Dnsruby
     end
 
     def update_internal_res(res)
-      [:port, :use_tcp, :tsig, :ignore_truncation, :packet_timeout,
+      [:port, :use_tcp, :no_tcp, :tsig, :ignore_truncation, :packet_timeout,
         :src_address, :src_port, :recurse,
         :udp_size, :dnssec].each do |param|
 
@@ -625,6 +634,11 @@ module Dnsruby
       @use_tcp = on
       update
     end
+
+    def no_tcp=(on)
+      @no_tcp=on
+      update
+    end
     
     #Sets the TSIG to sign outgoing messages with.
     #Pass in either a Dnsruby::RR::TSIG, or a key_name and key (or just a key)
@@ -732,11 +746,10 @@ module Dnsruby
         if (retry_count>0)
           retry_delay *= 2
         end
-        #          servers=[]
-        #          @single_resolvers.each do |r| servers.push(r.server) end
+
+        @single_resolvers.delete(nil) # Just in case...
         @single_resolvers.each_index do |i|
           res= @single_resolvers[i]
-          next if !res # @TODO@ WHY?1
           offset = (i*@retry_delay.to_f/@single_resolvers.length)
           if (retry_count==0)
             timeouts[base+offset]=[res, retry_count]

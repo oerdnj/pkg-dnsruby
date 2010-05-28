@@ -332,8 +332,9 @@ module Dnsruby
       if ([Types::MX, Types::NS, Types::AFSDB, Types::NAPTR, Types::RT,
             Types::SRV, Types::CNAME, Types::MB, Types::MG, Types::MR,
             Types::PTR].include?type_was)
-        if (line[line.length-1, 1] != ".")
-          line = line + "." + @origin.to_s
+        #        if (line[line.length-1, 1] != ".")
+        if (!(/\.\z/ =~ line))
+          line = line + "." + @origin.to_s + "."
         end
       end
       # Other RRs have several names. These should be parsed by Dnsruby,
