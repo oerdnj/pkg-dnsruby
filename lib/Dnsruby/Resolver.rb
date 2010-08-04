@@ -426,7 +426,6 @@ module Dnsruby
                 :use_tcp=>@use_tcp, :no_tcp=>@no_tcp, :packet_timeout=>@packet_timeout,
                 :tsig => @tsig, :ignore_truncation=>@ignore_truncation,
                 :src_address=>@src_address, :src_port=>@src_port,
-                :do_caching=>@do_caching,
                 :recurse=>@recurse, :udp_size=>@udp_size})
           @single_resolvers.push(res) if res
         end
@@ -453,7 +452,12 @@ module Dnsruby
       end
      
       # Attributes
-      @do_validation = true
+
+      # do_validation tells the Resolver whether to try to validate the response
+      # with DNSSEC. This should work for NSEC-signed domains, but NSEC3
+      # validation is not currently supported. This attribute now defaults to
+      # false. Please let me know if you require NSEC3 validation.
+      @do_validation = false
       @query_timeout = DefaultQueryTimeout
       @retry_delay = DefaultRetryDelay
       @retry_times = DefaultRetryTimes

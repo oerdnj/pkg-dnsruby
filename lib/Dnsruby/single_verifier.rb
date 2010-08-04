@@ -31,8 +31,6 @@ module Dnsruby
       @added_dlv_key = false
       # The DNSKEY RRs for the signed root (when it exists)
       @root_anchors = KeyCache.new
-      # Could add methods for interacting with root anchors - see test/tc_itar.rb
-      # for example of how to load ITAR trust anchors into dnsruby
 
       # The set of trust anchors.
       # If the root is unsigned, then these must be initialised with at least
@@ -163,6 +161,10 @@ module Dnsruby
     # k can be a KeyCache, or an RRSet of DNSKEYs.
     def add_trusted_key(k)
       @trusted_keys.add(k)
+    end
+
+    def add_root_ds(ds)
+      @configured_ds_store.push(ds)
     end
 
     # Wipes the cache of trusted keys

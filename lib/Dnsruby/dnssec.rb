@@ -77,11 +77,15 @@ module Dnsruby
 
     @@root_verifier = SingleVerifier.new(SingleVerifier::VerifierType::ROOT)
 
+    # #NOTE# You may wish to import these via a secure channel yourself, if
+    # using Dnsruby for validation.
+    @@root_key = RR.create(". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5")
+    @@root_verifier.add_root_ds(@@root_key)
+
     @@dlv_verifier = SingleVerifier.new(SingleVerifier::VerifierType::DLV)
 
     # @TODO@ Could add a new one of these for each anchor.
     @@anchor_verifier = SingleVerifier.new(SingleVerifier::VerifierType::ANCHOR)
-    # Should we be loading IANA Trust Anchor Repository? - no need - imported by ISC DLV
 
 
     # Add a trusted Key Signing Key for the ISC DLV registry.
@@ -120,6 +124,7 @@ module Dnsruby
     def self.reset
       @@validation_policy = ValidationPolicy::LOCAL_ANCHORS_THEN_ROOT
       @@root_verifier = SingleVerifier.new(SingleVerifier::VerifierType::ROOT)
+      @@root_verifier.add_root_ds(@@root_key)
 
       @@dlv_verifier = SingleVerifier.new(SingleVerifier::VerifierType::DLV)
 
@@ -139,37 +144,6 @@ module Dnsruby
       }
       return no_keys
     end
-    # Load the IANA TAR.
-    # THIS METHOD IS NOT SECURE!!!
-    def self.load_itar
-      # @TODO@ THIS IS VERY INSECURE!! WRITE THIS PROPERLY!!
-      # Should really check the signatures here to make sure the keys are good!
-      Net::FTP::open("ftp.iana.org") { |ftp|
-        ftp.login("anonymous")
-        ftp.passive = true
-        ftp.chdir("/itar")
-        lastname=nil
-        ftp.gettextfile("anchors.mf") {|line|
-          next if (line.strip.length == 0)
-          first = line[0]
-          if (first.class == String)
-            first = first.getbyte(0) # Ruby 1.9
-          end
-          #            print "Reading ITAR : #{line}, first : #{first}\n"
-          next if (first==59) # ";")
-          if (line.strip=~(/^DS /) || line.strip=~(/^DNSKEY /))
-            line = lastname.to_s + ((lastname.absolute?)?".":"") + " " + line
-          end
-          ds = RR.create(line)
-          if ((ds.type == Types::DS) || (ds.type == Types::DNSKEY))
-            #            assert(ds.name.absolute?)
-            Dnssec.add_trust_anchor(ds)
-          end
-          lastname = ds.name
-        }
-      }
-    end
-
 
     @@do_validation_with_recursor = true # Many nameservers don't handle DNSSEC correctly yet
     @@default_resolver = Resolver.new
