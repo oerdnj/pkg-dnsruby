@@ -104,7 +104,7 @@ require 'Dnsruby/TheLog'
 module Dnsruby
 
   # @TODO@ Remember to update version in dnsruby.gemspec!
-  VERSION = 1.47
+  VERSION = 1.48
   def Dnsruby.version
     return VERSION
   end
@@ -468,6 +468,7 @@ module Dnsruby
 
   #Indicates an error in decoding an incoming DNS message
   class DecodeError < ResolvError
+    attr_accessor :partial_message
   end
 
   #Indicates an error encoding a DNS message for transmission

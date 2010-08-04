@@ -71,22 +71,25 @@ module Dnsruby
     end
     
     def get_socket_pair
+      # Emulate socketpair on platforms which don't support it
+      srv = nil
       begin
-        pair =  Socket::socketpair(Socket::AF_LOCAL, Socket::SOCK_DGRAM, 0)
-        return pair
-
-        # Emulate socketpair on platforms which don't support it
-      rescue Exception
         srv = TCPServer.new('localhost', 0)
-        rsock = TCPSocket.new(srv.addr[3], srv.addr[1])
-        lsock = srv.accept
-        srv.close
-        return [lsock, rsock]
+      rescue Errno::EADDRNOTAVAIL # OSX Snow Leopard issue - need to use explicit IP
+        begin
+          srv = TCPServer.new('127.0.0.1', 0)
+        rescue Error # Try IPv6
+          srv = TCPServer.new('::1', 0)
+        end
       end
+      rsock = TCPSocket.new(srv.addr[3], srv.addr[1])
+      lsock = srv.accept
+      srv.close
+      return [lsock, rsock]
     end
 
     class QuerySettings
-      attr_accessor :query_bytes, :query, :ignore_truncation, :client_queue, 
+      attr_accessor :query_bytes, :query, :ignore_truncation, :client_queue,
         :client_query_id, :socket, :dest_server, :dest_port, :endtime, :udp_packet_size,
         :single_resolver
       # new(query_bytes, query, ignore_truncation, client_queue, client_query_id,
@@ -100,7 +103,7 @@ module Dnsruby
         @socket = args[5]
         @dest_server = args[6]
         @dest_port=args[7]
-        @endtime = args[8]  
+        @endtime = args[8]
         @udp_packet_size = args[9]
         @single_resolver = args[10]
       end
@@ -156,8 +159,8 @@ module Dnsruby
         sockets=[]
         timeouts=[]
         has_observer = false
-        @@mutex.synchronize {                
-          sockets = @@sockets 
+        @@mutex.synchronize {
+          sockets = @@sockets
           timeouts = @@timeouts.values
           has_observer = !@@observers.empty?
         }
@@ -241,7 +244,7 @@ module Dnsruby
           answeripaddr = IPAddr.new(answerip)
           dest_server = IPAddr.new("0.0.0.0")
           begin
-          destserveripaddr = IPAddr.new(dest_server)
+            destserveripaddr = IPAddr.new(dest_server)
           rescue ArgumentError
             # Host name not IP address
           end
@@ -249,7 +252,7 @@ module Dnsruby
                 (answeripaddr != destserveripaddr) &&
                 (answerfrom != dest_server))
             Dnsruby.log.warn("Unsolicited response received from #{answerip} instead of #{query_settings.dest_server}")
-          else 
+          else
             send_response_to_client(msg, bytes, socket)
           end
         end
@@ -308,8 +311,8 @@ module Dnsruby
       @@mutex.synchronize{
         socket = @@query_hash[id].socket
         @@timeouts.delete(id)
-        @@query_hash.delete(id)  
-        @@socket_hash.delete(socket)        
+        @@query_hash.delete(id)
+        @@socket_hash.delete(socket)
         @@sockets.delete(socket) # @TODO@ Not if persistent!
       }
       Dnsruby.log.debug{"Closing socket #{socket}"}
@@ -348,13 +351,13 @@ module Dnsruby
       }
       if (buf.length() < expected_length)
         begin
-        input, = socket.recv_nonblock(expected_length-buf.length)
-        if (input=="")
-          TheLog.info("Bad response from server - no bytes read - ignoring")
-          # @TODO@ Should we do anything about this?
-          return false
-        end
-        buf += input
+          input, = socket.recv_nonblock(expected_length-buf.length)
+          if (input=="")
+            TheLog.info("Bad response from server - no bytes read - ignoring")
+            # @TODO@ Should we do anything about this?
+            return false
+          end
+          buf += input
         rescue
           # Oh well - better luck next time!
           return false
@@ -421,13 +424,13 @@ module Dnsruby
           else
             # recvfrom failed - why?
             Dnsruby.log.error{"Error - recvfrom failed from #{socket}"}
-            handle_recvfrom_failure(socket, "")          
+            handle_recvfrom_failure(socket, "")
             return
-          end        
+          end
         end
       rescue Exception => e
         Dnsruby.log.error{"Error - recvfrom failed from #{socket}, exception : #{e}"}
-        handle_recvfrom_failure(socket, e)          
+        handle_recvfrom_failure(socket, e)
         return
       end
       Dnsruby.log.debug{";; answer from #{answerfrom} : #{answersize} bytes\n"}
@@ -435,14 +438,45 @@ module Dnsruby
       begin
         ans = Message.decode(buf)
       rescue Exception => e
-        #        print "DECODE ERROR\n"
         Dnsruby.log.error{"Decode error! #{e.class}, #{e}\nfor msg (length=#{buf.length}) : #{buf}"}
-        # @TODO@ Should know this from the socket!
         client_id=get_client_id_from_answerfrom(socket, answerip, answerport)
-        if (client_id != nil) 
-          send_exception_to_client(e, socket, client_id)
+        if (client_id == nil)
+          Dnsruby.log.error{"Decode error from #{answerip} but can't determine packet id"}
+        end
+        # We should check if the TC bit is set (if we can get that far)
+        if ((DecodeError === e) && (e.partial_message.header.tc))
+          Dnsruby.log.error{"Decode error (from {answerip})! Header shows truncation, so trying again over TCP"}
+          # If it is, then we should retry over TCP
+          sent = false
+          @@mutex.synchronize{
+            client_ids = @@socket_hash[socket]
+            # get the queries associated with them
+            client_ids.each do |id|
+              query_header_id=nil
+              query_header_id = @@query_hash[id].query.header.id
+              if (query_header_id == e.partial_message.header.id)
+                # process the response
+                client_queue = nil
+                res = nil
+                query=nil
+                client_queue = @@query_hash[id].client_queue
+                res = @@query_hash[id].single_resolver
+                query = @@query_hash[id].query
+
+                # NOW RESEND OVER TCP!
+                Thread.new {
+                  res.send_async(query, client_queue, id, true)
+                }
+                sent = true
+              end
+            end
+          }
+          if !sent
+            send_exception_to_client(e, socket, client_id)
+          end
+
         else
-          Dnsruby.log.error{"Decode error from #{answerfrom} but can't determine packet id"}
+          send_exception_to_client(e, socket, client_id)
         end
         return
       end
@@ -486,7 +520,6 @@ module Dnsruby
           query_settings = @@query_hash[id]
           if (answerip == query_settings.dest_server && answerport == query_settings.dest_port)
             # We have a match
-            # - @TODO@ as long as we're not speaking to the same server on two ports!
             client_id = id
             break
           end
@@ -516,7 +549,7 @@ module Dnsruby
       else
         @@select_thread = Thread.new {
           do_select
-        }      
+        }
       end
     end
     
@@ -637,7 +670,7 @@ module Dnsruby
     def add_observer(client_queue, observer)
       @@mutex.synchronize {
         @@observers[client_queue]=observer
-        check_select_thread_synchronized # Is this really necessary? The client should start the thread by sending a query, really...        
+        check_select_thread_synchronized # Is this really necessary? The client should start the thread by sending a query, really...
         if (!@@tick_observers.include?observer)
           @@tick_observers.push(observer)
         end
@@ -669,7 +702,7 @@ module Dnsruby
       }
       if (observer)
         observer.handle_queue_event(client_queue, client_query_id)
-      end      
+      end
     end
     
     def send_tick_to_observers

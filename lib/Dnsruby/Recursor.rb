@@ -303,8 +303,8 @@ module Dnsruby
     #This method is much like the normal query() method except it disables
     #the recurse flag in the packet and explicitly performs the recursion.
     #
-    #  packet = res.query_dorecursion( "www.netscape.com.", "A")
-    #  packet = res.query_dorecursion( "www.netscape.com.", "A", "IN", true) # no validation
+    #  packet = res.query( "www.netscape.com.", "A")
+    #  packet = res.query( "www.netscape.com.", "A", "IN", true) # no validation
     #
     #The Recursor maintains a cache of known nameservers.
     #DNSSEC validation is performed unless true is passed as the fourth parameter.
@@ -525,7 +525,9 @@ module Dnsruby
           
       nameservers = []
       ns.each do |nss|
-        nss.each {|n| nameservers.push(n)}
+        nss.each {|n|
+          nameservers.push(n.to_s)
+        }
       end
       resolver = Resolver.new({:nameserver=>nameservers})
       servers = []
