@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Ondřej Surý <ondrej@debian.org>
 Uploaders: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
 Build-Depends: cdbs, debhelper (>= 5), ruby-pkg-tools (>= 0.9), ruby1.8, rake, rdoc, graphviz
-Standards-Version: 3.8.4
+Standards-Version: 3.9.1
 Homepage: http://rubyforge.org/projects/dnsruby/
 Vcs-Browser: http://svn.debian.org/wsvn/pkg-ruby-extras/packages/dnsruby/trunk/
 Vcs-Svn: svn://svn.debian.org/pkg-ruby-extras/packages/dnsruby/trunk/
