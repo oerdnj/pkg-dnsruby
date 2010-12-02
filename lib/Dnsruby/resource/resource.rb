@@ -48,7 +48,8 @@ module Dnsruby
       end      
       new_pos = @rrs.length - @num_sigs
       if ((@num_sigs == @rrs.length)  && @num_sigs > 0) # if we added RRSIG first
-        if (r.type != @rrs.last.type_covered)
+        if (((r.type != @rrs.last.type_covered) && (r.type != Types.RRSIG))||
+              ((r.type == Types.RRSIG) && (r.type_covered != @rrs.last.type_covered)))
           return false
         end
       end
@@ -213,7 +214,23 @@ module Dnsruby
   #   rr_again = Dnsruby::RR.create(s)
   #
   class RR
+
+    include Comparable
     
+    def <=>(other)
+      #      return 1 if ((!other) || !(other.name) || !(other.type))
+      #      return -1 if (!@name)
+      if (@name.canonical == other.name.canonical)
+        if (@type.code == other.type.code)
+          return (@rdata <=> other.rdata)
+        else
+          return @type.code <=> other.type.code
+        end
+      else
+        return @name <=> other.name
+      end
+    end
+
     # A regular expression which catches any valid resource record.
     @@RR_REGEX = Regexp.new("^\\s*(\\S+)\\s*(\\d+)?\\s*(#{Classes.regexp +
       "|CLASS\\d+"})?\\s*(#{Types.regexp + '|TYPE\\d+'})?\\s*([\\s\\S]*)\$") #:nodoc: all
@@ -275,6 +292,9 @@ module Dnsruby
     def sameRRset(rec)
       if (@klass != rec.klass || @name.downcase != rec.name.downcase)
         return false
+      end
+      if (rec.type == Types.RRSIG) && (@type == Types.RRSIG)
+        return rec.type_covered == self.type_covered
       end
       [rec, self].each { |rr|
         if (rr.type == Types::RRSIG)
@@ -412,8 +432,8 @@ module Dnsruby
       if ((rrtype == "NAPTR") || (rrtype == "TXT"))
       else
         if (rdata)
-        rdata.gsub!("(", "")
-        rdata.gsub!(")", "")
+          rdata.gsub!("(", "")
+          rdata.gsub!(")", "")
         end
       end
       

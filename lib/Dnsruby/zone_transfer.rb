@@ -91,7 +91,8 @@ module Dnsruby
           server=Config.resolve_server(server)
           xfr = do_transfer(zone, server)
           break
-        rescue Exception => exception
+        rescue Exception => e
+          exception = e
         end
       end
       if (xfr == nil && exception != nil)
@@ -133,7 +134,7 @@ module Dnsruby
               raise ResolvError.new(rcode.string);
             end
             
-            if (response.question[0].qtype != @transfer_type) 
+            if (response.question[0].qtype != @transfer_type)
               raise ResolvError.new("invalid question section")
             end
             
@@ -213,7 +214,28 @@ module Dnsruby
         ret +=", Deletes : " + @deletes.join(",")
       end
     end
-    
+
+    #Compare two serials according to RFC 1982. Return 0 if equal,
+    #-1 if s1 is bigger, 1 if s1 is smaller.
+    def compare_serial(s1, s2)
+      if s1 == s2
+        return 0
+      end
+      if s1 < s2 and (s2 - s1) < (2**31)
+        return 1
+      end
+      if s1 > s2 and (s1 - s2) > (2**31)
+        return 1
+      end
+      if s1 < s2 and (s2 - s1) > (2**31)
+        return -1
+      end
+      if s1 > s2 and (s1 - s2) < (2**31)
+        return -1
+      end
+      return 0
+    end
+
     def parseRR(rec) #:nodoc: all
       name = rec.name
       type = rec.type
@@ -228,8 +250,11 @@ module Dnsruby
         # Remember the serial number in the initial SOA; we need it
         # to recognize the end of an IXFR.
         @end_serial = rec.serial
-        if (@transfer_type == Types.IXFR && @end_serial <= @serial)
+        #        if ((@transfer_type == Types.IXFR) && (@end_serial <= @serial))
+        if ((@transfer_type == Types.IXFR) && (compare_serial(@end_serial, @serial) >= 0))
           Dnsruby.log.debug("zone up to date")
+          raise ZoneSerialError.new("IXFR up to date: expected serial " +
+              @serial.to_s + " , got " + rec.serial.to_s);
           @state = :End
         else
           @state = :FirstData
@@ -246,6 +271,7 @@ module Dnsruby
         else
           Dnsruby.log.debug("AXFR response - using AXFR")
           @rtype = Types.AXFR
+          @transfer_type = Types.AXFR
           @axfr = []
           @axfr << @initialsoa
           @state = :Axfr
@@ -283,8 +309,8 @@ module Dnsruby
             @state = :End
             return
           elsif (soa_serial != @current_serial)
-            raise ResolvError.new("IXFR out of sync: expected serial " +
-                @current_serial + " , got " + soa_serial);
+            raise ZoneSerialError.new("IXFR out of sync: expected serial " +
+                @current_serial.to_s + " , got " + soa_serial.to_s);
           else
             @state = :Ixfr_DelSoa
             parseRR(rec); # Restart...
@@ -298,9 +324,10 @@ module Dnsruby
         # Old BINDs sent cross class A records for non IN classes.
         if (type == Types.A && rec.klass() != @klass)
         else
-          @axfr << rec
           if (type == Types.SOA)
             @state = :End
+          else
+            @axfr << rec
           end
         end
       when :End
@@ -340,10 +367,10 @@ module Dnsruby
       buf = tcp_read(socket, answersize)
       msg = Message.decode(buf)
       if (@tsig)
-          if !@tsig.verify_envelope(msg, buf)
-            Dnsruby.log.error("Bad signature on zone transfer - closing connection")
-            raise ResolvError.new("Bad signature on zone transfer")
-          end      
+        if !@tsig.verify_envelope(msg, buf)
+          Dnsruby.log.error("Bad signature on zone transfer - closing connection")
+          raise ResolvError.new("Bad signature on zone transfer")
+        end
       end
       return msg
     end  

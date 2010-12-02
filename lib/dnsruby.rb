@@ -104,7 +104,7 @@ require 'Dnsruby/TheLog'
 module Dnsruby
 
   # @TODO@ Remember to update version in dnsruby.gemspec!
-  VERSION = 1.49
+  VERSION = 1.51
   def Dnsruby.version
     return VERSION
   end
@@ -477,6 +477,10 @@ module Dnsruby
 
   #Indicates an error verifying 
   class VerifyError < ResolvError
+  end
+
+  #Indicates a zone transfer has failed due to SOA serial mismatch
+  class ZoneSerialError < ResolvError
   end
 
   #The Resolv class can be used to resolve addresses using /etc/hosts and /etc/resolv.conf, 

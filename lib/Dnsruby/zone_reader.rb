@@ -217,7 +217,7 @@ module Dnsruby
       split = line.split(' ') # split on whitespace
       name = split[0].strip
       if (name.index"\\")
-
+        
         ls =[]
         Name.create(name).labels.each {|el| ls.push(Name.decode(el.to_s))}
         new_name = ls.join('.')
@@ -331,7 +331,7 @@ module Dnsruby
       #   "." + origin string if necessary
       if ([Types::MX, Types::NS, Types::AFSDB, Types::NAPTR, Types::RT,
             Types::SRV, Types::CNAME, Types::MB, Types::MG, Types::MR,
-            Types::PTR].include?type_was)
+            Types::PTR, Types::DNAME].include?type_was)
         #        if (line[line.length-1, 1] != ".")
         if (!(/\.\z/ =~ line))
           line = line + "." + @origin.to_s + "."
@@ -359,9 +359,9 @@ module Dnsruby
         when Types::RP
           if (!parsed_rr.mailbox.absolute?)
             parsed_rr.mailbox = parsed_rr.mailbox.to_s + "." + @origin.to_s
-            if (!parsed_rr.txtdomain.absolute?)
-              parsed_rr.txtdomain = parsed_rr.txtdomain.to_s + "." + @origin.to_s
-            end
+          end
+          if (!parsed_rr.txtdomain.absolute?)
+            parsed_rr.txtdomain = parsed_rr.txtdomain.to_s + "." + @origin.to_s
           end
         end
         line = parsed_rr.to_s
