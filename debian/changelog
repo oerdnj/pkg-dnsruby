@@ -1,3 +1,9 @@
+dnsruby (1.52-1) unstable; urgency=low
+
+  * Imported Upstream version 1.52
+
+ -- Ondřej Surý <ondrej@debian.org>  Sat, 19 Mar 2011 15:23:12 +0100
+
 dnsruby (1.51-1) unstable; urgency=low
 
   * New upstrem release 1.51
