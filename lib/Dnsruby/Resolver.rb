@@ -394,8 +394,8 @@ module Dnsruby
               else
                 send(key.to_s+"=", args[0][key])
               end
-            rescue Exception
-              Dnsruby.log.error{"Argument #{key} not valid\n"}
+            rescue Exception => e
+              Dnsruby.log.error{"Argument #{key} not valid : #{e}\n"}
             end
           end
         elsif (args[0].class == String)
@@ -517,7 +517,7 @@ module Dnsruby
     end
 
     def nameservers=(ns)
-      self.nameserver=(n)
+      self.nameserver=(ns)
     end
     def nameserver=(n)
       @configured = true
@@ -869,7 +869,7 @@ module Dnsruby
       @parent.single_res_mutex.synchronize {
         @query_list.each do |client_query_id, values|
           msg, client_queue, q, outstanding = values
-          send_result_and_close(client_queue, client_query_id, q, nil, OtherResolvError.new("Resolver closing!"))
+          send_result_and_stop_querying(client_queue, client_query_id, q, nil, OtherResolvError.new("Resolver closing!"))
         end
       }
     end
@@ -977,10 +977,10 @@ module Dnsruby
       # 2) we've validated the response - it's ready to be sent to the client
       #
       # so need two more methods :
-      #  handleValidationResponse : basically calls send_result_and_close and
+      #  handleValidationResponse : basically calls send_result_and_stop_querying and
       #  handleValidationError : does the same as handleValidationResponse, but for errors
       # can leave handleError alone
-      # but need to change handleResponse to stop sending, rather than send_result_and_close.
+      # but need to change handleResponse to stop sending, rather than send_result_and_stop_querying.
       #
       # @TODO@ Also, we could really do with a MaxValidationTimeout - if validation not OK within
       # this time, then raise Timeout (and stop validation)?
@@ -1143,7 +1143,6 @@ module Dnsruby
         Dnsruby.log.error{"Serious internal error : expected select queue #{s_queue}, got #{select_queue}"}
         raise RuntimeError.new("Serious internal error : expected select queue #{s_queue}, got #{select_queue}")
       end
-      #        send_result_and_close(client_queue, client_query_id, select_queue, response, nil)
       stop_querying(client_query_id)
       # @TODO@ Does the client want notified at this point?
       #        client_queue.push([client_query_id, Resolver::EventType::RECEIVED, msg, nil])
@@ -1163,7 +1162,6 @@ module Dnsruby
       else
         # @TODO@ Was there an error validating? Should we raise an exception for certain security levels?
         # This should be configurable by the client.
-        #        send_result_and_close(client_queue, client_query_id, select_queue, response, nil)
         send_result(client_queue, client_query_id, select_queue, response, nil)
         #      }
       end
