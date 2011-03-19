@@ -30,5 +30,4 @@ gem unpack "$gemball"
 
 tar -czf $tdir/${fname} *
 
-mv "$gemball" "$gemball.bkp"
 mv "$tdir/$fname" "$tarball"
