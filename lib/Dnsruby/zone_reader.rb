@@ -203,6 +203,13 @@ module Dnsruby
       # Note that a freestanding "@" is used to denote the current origin - we can simply replace that straight away
       # Remove the ( and )
       # Note that no domain name may be specified in the RR - in that case, last_name should be used. How do we tell? Tab or space at start of line.
+
+      # If we have text in the record, then ignore that in the parsing, and stick it on again at the end
+      stored_line = "";
+      if (line.index('"') != nil)
+          stored_line = line[line.index('"'), line.length];
+          line = line [0, line.index('"')]
+      end
       if ((line[0,1] == " ") || (line[0,1] == "\t"))
         line = @last_name + " " + line
       end
@@ -324,7 +331,12 @@ module Dnsruby
         end
       end
 
-      line = line.split.join(' ').strip
+      line = line.strip
+
+      if (stored_line && stored_line != "")
+        line += " " + stored_line.strip
+      end
+
       # We need to fix up any non-absolute names in the RR
       # Some RRs have a single name, at the end of the string -
       #   to do these, we can just check the last character for "." and add the
@@ -366,7 +378,6 @@ module Dnsruby
         end
         line = parsed_rr.to_s
       end
-
       if (do_prefix_hack)
         return line + "\n", type_string, @last_name
       end
