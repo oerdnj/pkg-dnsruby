@@ -3,41 +3,43 @@ Section: ruby
 Priority: optional
 Maintainer: Ondřej Surý <ondrej@debian.org>
 Uploaders: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
-Build-Depends: cdbs, debhelper (>= 5), ruby-pkg-tools (>= 0.9), ruby1.8, rake, rdoc, graphviz
-Standards-Version: 3.9.1
+Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.3), graphviz
+Standards-Version: 3.9.2
+Vcs-Browser: http://git.debian.org/?p=pkg-opendnssec/dnsruby.git;a=summary
+Vcs-Git: git://git.debian.org/git/pkg-nlnetlabs/dnsruby.git
 Homepage: http://rubyforge.org/projects/dnsruby/
-Vcs-Browser: http://svn.debian.org/wsvn/pkg-ruby-extras/packages/dnsruby/trunk/
-Vcs-Svn: svn://svn.debian.org/pkg-ruby-extras/packages/dnsruby/trunk/
+XS-Ruby-Versions: all
+
+Package: ruby-dnsruby
+Provides: libdns-ruby, libdns-ruby1.8
+Conflicts: libdns-ruby (<< 1.52-2), libdns-ruby1.8 (<< 1.52-2), libdns-ruby-doc
+Replaces: libdns-ruby (<< 1.52-2), libdns-ruby1.8 (<< 1.52-2)
+Architecture: all
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter
+Description: Ruby DNS and DNSSEC client library
+ Dnsruby is a pure Ruby DNS client library. It provides a complete DNS
+ client implementation, including full DNSSEC support.  Dnsruby is
+ currently used in projects such as OpenDNSSEC and ISC's DLV service.
 
 Package: libdns-ruby1.8
-Depends: ruby1.8, ${misc:Depends}
-Suggests: libdns-ruby-doc
 Architecture: all
-Description: Ruby DNS client library
+Depends: ruby-dnsruby
+Description: Ruby DNS client library (dummy package)
  Dnsruby is a pure Ruby DNS client library. It provides a complete DNS
- client implementation, including full DNSSEC support. Dnsruby is
+ client implementation, including full DNSSEC support.  Dnsruby is
  currently used in projects such as OpenDNSSEC and ISC's DLV service.
+ .
+ This package is a transitional package and can be safely removed
+ after upgrade.
 
 Package: libdns-ruby
 Architecture: all
-Depends: libdns-ruby1.8, ${misc:Depends}
-Suggests: libdns-ruby-doc
+Depends: ruby-dnsruby
 Description: Ruby DNS client library (dummy package)
  Dnsruby is a pure Ruby DNS client library. It provides a complete DNS
- client implementation, including full DNSSEC support. Dnsruby is
+ client implementation, including full DNSSEC support.  Dnsruby is
  currently used in projects such as OpenDNSSEC and ISC's DLV service.
  .
- This package is a dependency package, which depends on Debian's default Ruby
- version (currently 1.8.x).
-
-Package: libdns-ruby-doc
-Section: doc
-Depends: libdns-ruby, ${misc:Depends}
-Architecture: all
-Description: Documentation for libdns-ruby (dnsruby)
- This package provides rdoc documentation and unit tests for
- DnsRuby.
- .
- Dnsruby is a pure Ruby DNS client library. It provides a complete DNS
- client implementation, including full DNSSEC support. Dnsruby is
- currently used in projects such as OpenDNSSEC and ISC's DLV service.
+ This package is a transitional package and can be safely removed
+ after upgrade.
