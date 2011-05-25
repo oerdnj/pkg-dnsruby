@@ -1,3 +1,9 @@
+dnsruby (1.52-2) unstable; urgency=low
+
+  * Convert package to gem2deb build system
+
+ -- Ondřej Surý <ondrej@debian.org>  Wed, 25 May 2011 09:08:45 +0200
+
 dnsruby (1.52-1) unstable; urgency=low
 
   * Imported Upstream version 1.52
