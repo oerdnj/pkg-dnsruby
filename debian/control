@@ -3,7 +3,7 @@ Section: ruby
 Priority: optional
 Maintainer: Ondřej Surý <ondrej@debian.org>
 Uploaders: Debian Ruby Extras Maintainers <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
-Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.3), graphviz
+Build-Depends: debhelper (>= 7.0.50~), gem2deb (>= 0.2.3~), graphviz
 Standards-Version: 3.9.2
 Vcs-Browser: http://git.debian.org/?p=pkg-opendnssec/dnsruby.git;a=summary
 Vcs-Git: git://git.debian.org/git/pkg-nlnetlabs/dnsruby.git
