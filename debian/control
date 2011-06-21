@@ -12,8 +12,8 @@ XS-Ruby-Versions: all
 
 Package: ruby-dnsruby
 Provides: libdns-ruby, libdns-ruby1.8
-Conflicts: libdns-ruby (<< 1.52-2), libdns-ruby1.8 (<< 1.52-2), libdns-ruby-doc
-Replaces: libdns-ruby (<< 1.52-2), libdns-ruby1.8 (<< 1.52-2)
+Conflicts: libdns-ruby (<< 1.52-2~), libdns-ruby1.8 (<< 1.52-2~), libdns-ruby-doc
+Replaces: libdns-ruby (<< 1.52-2~), libdns-ruby1.8 (<< 1.52-2~)
 Architecture: all
 XB-Ruby-Versions: ${ruby:Versions}
 Depends: ${shlibs:Depends}, ${misc:Depends}, ruby | ruby-interpreter
