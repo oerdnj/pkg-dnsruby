@@ -1,9 +1,10 @@
-dnsruby (1.52-3) unstable; urgency=low
+dnsruby (1.53-1) unstable; urgency=low
 
   * Build-Depends on gem2deb 0.2.3~ to allow backports
   * Conflict with 1.52-2~ instead of 1.52 to allow backports
+  * Imported Upstream version 1.53
 
- -- Ondřej Surý <ondrej@debian.org>  Tue, 21 Jun 2011 14:32:10 +0200
+ -- Ondřej Surý <ondrej@debian.org>  Mon, 21 Nov 2011 17:13:20 +0100
 
 dnsruby (1.52-2) unstable; urgency=low
 
