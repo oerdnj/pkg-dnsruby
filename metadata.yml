@@ -1,0 +1,191 @@
+--- !ruby/object:Gem::Specification 
+name: dnsruby
+version: !ruby/object:Gem::Version 
+  hash: 101
+  prerelease: 
+  segments: 
+  - 1
+  - 53
+  version: "1.53"
+platform: ruby
+authors: 
+- AlexD
+autorequire: dnsruby
+bindir: bin
+cert_chain: []
+
+date: 2011-11-17 00:00:00 Z
+dependencies: []
+
+description: 
+email: alexd@nominet.org.uk
+executables: []
+
+extensions: []
+
+extra_rdoc_files: 
+- DNSSEC
+- EXAMPLES
+- README
+- EVENTMACHINE
+files: 
+- Rakefile
+- test/custom.txt
+- test/resolv.conf
+- test/tc_axfr.rb
+- test/tc_cache.rb
+- test/tc_dlv.rb
+- test/tc_dns.rb
+- test/tc_dnskey.rb
+- test/tc_dnsruby.rb
+- test/tc_ds.rb
+- test/tc_escapedchars.rb
+- test/tc_header.rb
+- test/tc_hip.rb
+- test/tc_ipseckey.rb
+- test/tc_misc.rb
+- test/tc_name.rb
+- test/tc_naptr.rb
+- test/tc_nsec.rb
+- test/tc_nsec3.rb
+- test/tc_nsec3param.rb
+- test/tc_packet.rb
+- test/tc_packet_unique_push.rb
+- test/tc_question.rb
+- test/tc_queue.rb
+- test/tc_recur.rb
+- test/tc_res_config.rb
+- test/tc_res_env.rb
+- test/tc_res_file.rb
+- test/tc_res_opt.rb
+- test/tc_resolver.rb
+- test/tc_rr-opt.rb
+- test/tc_rr-txt.rb
+- test/tc_rr-unknown.rb
+- test/tc_rr.rb
+- test/tc_rrset.rb
+- test/tc_rrsig.rb
+- test/tc_single_resolver.rb
+- test/tc_soak.rb
+- test/tc_soak_base.rb
+- test/tc_sshfp.rb
+- test/tc_tcp.rb
+- test/tc_tkey.rb
+- test/tc_tsig.rb
+- test/tc_update.rb
+- test/tc_validator.rb
+- test/tc_verifier.rb
+- test/ts_dnsruby.rb
+- test/ts_offline.rb
+- test/ts_online.rb
+- lib/Dnsruby/Cache.rb
+- lib/Dnsruby/code_mapper.rb
+- lib/Dnsruby/Config.rb
+- lib/Dnsruby/DNS.rb
+- lib/Dnsruby/dnssec.rb
+- lib/Dnsruby/Hosts.rb
+- lib/Dnsruby/ipv4.rb
+- lib/Dnsruby/ipv6.rb
+- lib/Dnsruby/key_cache.rb
+- lib/Dnsruby/message.rb
+- lib/Dnsruby/name.rb
+- lib/Dnsruby/PacketSender.rb
+- lib/Dnsruby/Recursor.rb
+- lib/Dnsruby/Resolver.rb
+- lib/Dnsruby/resource/A.rb
+- lib/Dnsruby/resource/AAAA.rb
+- lib/Dnsruby/resource/AFSDB.rb
+- lib/Dnsruby/resource/CERT.rb
+- lib/Dnsruby/resource/DHCID.rb
+- lib/Dnsruby/resource/DLV.rb
+- lib/Dnsruby/resource/DNSKEY.rb
+- lib/Dnsruby/resource/domain_name.rb
+- lib/Dnsruby/resource/DS.rb
+- lib/Dnsruby/resource/generic.rb
+- lib/Dnsruby/resource/HINFO.rb
+- lib/Dnsruby/resource/HIP.rb
+- lib/Dnsruby/resource/IN.rb
+- lib/Dnsruby/resource/IPSECKEY.rb
+- lib/Dnsruby/resource/ISDN.rb
+- lib/Dnsruby/resource/KX.rb
+- lib/Dnsruby/resource/LOC.rb
+- lib/Dnsruby/resource/MINFO.rb
+- lib/Dnsruby/resource/MX.rb
+- lib/Dnsruby/resource/NAPTR.rb
+- lib/Dnsruby/resource/NSAP.rb
+- lib/Dnsruby/resource/NSEC.rb
+- lib/Dnsruby/resource/NSEC3.rb
+- lib/Dnsruby/resource/NSEC3PARAM.rb
+- lib/Dnsruby/resource/OPT.rb
+- lib/Dnsruby/resource/PX.rb
+- lib/Dnsruby/resource/resource.rb
+- lib/Dnsruby/resource/RP.rb
+- lib/Dnsruby/resource/RRSIG.rb
+- lib/Dnsruby/resource/RT.rb
+- lib/Dnsruby/resource/SOA.rb
+- lib/Dnsruby/resource/SPF.rb
+- lib/Dnsruby/resource/SRV.rb
+- lib/Dnsruby/resource/SSHFP.rb
+- lib/Dnsruby/resource/TKEY.rb
+- lib/Dnsruby/resource/TSIG.rb
+- lib/Dnsruby/resource/TXT.rb
+- lib/Dnsruby/resource/X25.rb
+- lib/Dnsruby/select_thread.rb
+- lib/Dnsruby/single_verifier.rb
+- lib/Dnsruby/SingleResolver.rb
+- lib/Dnsruby/TheLog.rb
+- lib/Dnsruby/update.rb
+- lib/Dnsruby/validator_thread.rb
+- lib/Dnsruby/zone_reader.rb
+- lib/Dnsruby/zone_transfer.rb
+- lib/dnsruby.rb
+- demo/axfr.rb
+- demo/check_soa.rb
+- demo/check_zone.rb
+- demo/digdlv.rb
+- demo/digroot.rb
+- demo/example_recurse.rb
+- demo/mresolv.rb
+- demo/mx.rb
+- demo/rubydig.rb
+- demo/to_resolve.txt
+- demo/trace_dns.rb
+- DNSSEC
+- EXAMPLES
+- README
+- EVENTMACHINE
+homepage: http://rubyforge.org/projects/dnsruby/
+licenses: []
+
+post_install_message: 
+rdoc_options: []
+
+require_paths: 
+- lib
+required_ruby_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+required_rubygems_version: !ruby/object:Gem::Requirement 
+  none: false
+  requirements: 
+  - - ">="
+    - !ruby/object:Gem::Version 
+      hash: 3
+      segments: 
+      - 0
+      version: "0"
+requirements: []
+
+rubyforge_project: dnsruby
+rubygems_version: 1.8.11
+signing_key: 
+specification_version: 3
+summary: Ruby DNS(SEC) implementation
+test_files: 
+- test/ts_offline.rb
