@@ -65,7 +65,11 @@ module Dnsruby
           rescue ArgumentError
             @fptype = FpTypes.new(names[1])
           end
-          @fp = [names[2]].pack("H*")
+          remaining = ""
+          for i in 2..(names.length + 1)
+            remaining += names[i].to_s
+          end
+          @fp = [remaining].pack("H*")
         end
       end
 
