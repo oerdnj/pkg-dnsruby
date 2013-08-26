@@ -1,3 +1,16 @@
+dnsruby (1.54-2) unstable; urgency=low
+
+  * New upstream version 1.54
+  * Drop libruby- transitional packages
+
+ -- Ondřej Surý <ondrej@debian.org>  Mon, 26 Aug 2013 08:53:19 +0200
+
+dnsruby (1.54-1) unstable; urgency=low
+
+  * New upstream version 1.54
+
+ -- Ondřej Surý <ondrej@debian.org>  Mon, 26 Aug 2013 08:52:33 +0200
+
 dnsruby (1.53-1) unstable; urgency=low
 
   * Build-Depends on gem2deb 0.2.3~ to allow backports
